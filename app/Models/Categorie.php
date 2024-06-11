@@ -12,7 +12,7 @@ class Categorie extends Model
     use SoftDeletes, HasFactory ;
 
     protected $fillable = [
-        'libelle',
+        'nom',
         'description',
     ];
 
