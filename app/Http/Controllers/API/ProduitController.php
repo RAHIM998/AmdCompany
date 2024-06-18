@@ -3,32 +3,43 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProduitRequest;
+use App\Models\Produit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Mockery\Exception;
 
 class ProduitController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    //Fonction d'affichage des produits
     public function index()
     {
-        //
+        try {
+            $product = Produit::Paginate(5);
+            return $this->responseJson($product, 'Liste des produits');
+        }catch (Exception $exception){
+            return $this->responseJson(['data' => $exception->getMessage()], 'Erreur !!', 500);
+        }
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    //Fonction de sauvegarde de produits
+    public function store(ProduitRequest $request)
     {
-        //
-    }
+        $user = Auth::user();
+        $validatedData = $request->validated();
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
+        try {
+            if ($user->role === 'admin'){
+                $product = Produit::create($validatedData);
+                return $this->responseJson([
+                    $product
+                ], 'Produit sauvegardé avec succès !!');
+            }else {
+                return $this->responseJson(null, 'Vous n\'avez pas les droits requis pour effectuer cette action !!', 405);
+            }
+        }catch (Exception $exception){
+            return $this->responseJson(['date' => $exception->getMessage()], 'Erreur !!', 500);
+        }
     }
 
     /**

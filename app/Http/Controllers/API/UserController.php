@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Laravel\Passport\Token;
 use Mockery\Exception;
 use function Laravel\Prompts\error;
 
@@ -41,6 +42,28 @@ class UserController extends Controller
 
     }
 
+    //Fonction de déconnexion de l'utilisateur
+    public function logout(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $accessToken = $user->token();
+
+            Token::where('id', $accessToken->id)->update(['revoked' => true]);
+
+            $accessToken->revoke();
+            return $this->responseJson([
+                'message' => 'Utilisateur déconnecté avec succès !!',
+                'status' => 200
+            ], 200);
+
+        }catch (Exception $exception){
+            return $this->responseJson([
+                'message' => $exception->getMessage()
+            ], 500);
+        }
+
+    }
 
     //Lister les utilisateurs
     public function index()

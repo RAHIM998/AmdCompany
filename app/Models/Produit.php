@@ -13,7 +13,7 @@ class Produit extends Model
     use SoftDeletes, HasFactory;
 
     protected $fillable = [
-        'produit_id',
+        'categorie_id',
         'libelle',
         'prix',
         'stock',

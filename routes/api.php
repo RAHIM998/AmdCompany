@@ -16,9 +16,15 @@ Route::middleware('auth:api')->group(function () {
     Route::get('user/{id}', [UserController::class, 'show']);
     Route::put('user/{id}', [UserController::class, 'update']);
     Route::delete('user/{id}', [UserController::class, 'destroy']);
+    Route::post('logout', [UserController::class, 'logout'])->name('logout');
 
     //Routes des catégory
     Route::apiResource('category', \App\Http\Controllers\API\CategorieController::class);
+
+    //Routes pour les produits
+    Route::apiResource('produit', \App\Http\Controllers\API\ProduitController::class);
+
+
 });
 
 

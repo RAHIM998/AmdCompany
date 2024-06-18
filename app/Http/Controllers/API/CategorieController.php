@@ -15,13 +15,9 @@ class CategorieController extends Controller
     public function index()
     {
         try {
-            $user = Auth::user();
-            if ($user->role === 'admin'){
-                $category = Categorie::paginate(5);
-                return $this->responseJson($category, 'Lsite des catégories');
-            }else{
-                return $this->responseJson(null, 'Désolé vous n\'avez le droit d\'accéder à ces données !!', 405);
-            }
+            $category = Categorie::paginate(5);
+            return $this->responseJson($category, 'Lsite des catégories');
+
         }catch (Exception $exception){
             return $this->responseJson([$exception->getMessage()], 'Erreur', 500);
         }
@@ -33,7 +29,7 @@ class CategorieController extends Controller
     {
         try {
             $user = Auth::user();
-            $validatedData = $request->validated(); // Utilisation de validated() pour obtenir les données validées
+            $validatedData = $request->validated();
 
             if ($user->role === 'admin') {
                 $category = Categorie::create($validatedData);
