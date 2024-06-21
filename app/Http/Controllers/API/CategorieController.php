@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoryRequest;
 use App\Models\Categorie;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Mockery\Exception;
@@ -15,13 +16,12 @@ class CategorieController extends Controller
     public function index()
     {
         try {
-            $category = Categorie::paginate(5);
+            $category = Categorie::with('produit')->get();
             return $this->responseJson($category, 'Lsite des catégories');
 
         }catch (Exception $exception){
             return $this->responseJson([$exception->getMessage()], 'Erreur', 500);
         }
-
     }
 
     //Fonction d'ajout des catégories
@@ -92,24 +92,26 @@ class CategorieController extends Controller
         }
     }
 
-
-
-    /**
-     * Remove the specified resource from storage.
-     */
+    //Fonction de suppression des catégory
     public function destroy(string $id)
     {
         try {
             $user = Auth::user();
-            if ($user->role === 'admin'){
+            $categoryDelete = Categorie::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                $categoryDelete->delete();
+
                 return $this->responseJson([
-                    'data' => Categorie::destroy($id),
-                ], 'Catégorie supprimée avec succès !!');
-            }else{
-                return $this->responseJson(null, 'Désolé vous n\'avez pas les droits requis !!', 404);
+                    'data' => $categoryDelete
+                ], 'Catégory supprimé avec succès !!');
+            } else {
+                return $this->responseJson(null, 'Désolé, vous n\'avez pas les droits requis !!', 403);
             }
-        }catch (Exception $exception){
-            return $this->responseJson($exception->getMessage(), 'Erreur interne du serveur !!', 500);
+        } catch (ModelNotFoundException $e) {
+            return $this->responseJson(null, 'Catégory non trouvé !!', 404);
+        } catch (Exception $e) {
+            return $this->responseJson(['error' => $e->getMessage()], 'Erreur lors de la suppression du produit !!', 500);
         }
     }
 }

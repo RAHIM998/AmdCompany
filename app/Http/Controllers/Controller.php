@@ -17,5 +17,11 @@ abstract class Controller extends BaseController
         ], $status_code);
     }
 
+    public function imageToBlob($images){
+        $file= fopen($images->getRealPath(), 'rb');
+        $content = stream_get_contents($file);
+        fclose($file);
+        return base64_encode($content);
+    }
 
 }

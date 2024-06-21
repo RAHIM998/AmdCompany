@@ -1,14 +1,18 @@
 <?php
 
+use App\Http\Controllers\API\ProduitController;
 use App\Http\Controllers\API\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-//Route de connexion
-Route::post('login', [UserController::class, 'login'])->name('login');
+Route::middleware('guest')->group(function () {
+    //Route de connexion
+    Route::post('login', [UserController::class, 'login'])->name('login');
 
-//Route pour créer des utilisateurs
-Route::post('user', [UserController::class, 'store']);
+    //Route pour créer des utilisateurs
+    Route::post('user', [UserController::class, 'store']);
+
+});
 
 Route::middleware('auth:api')->group(function () {
     // Routes des utilisateurs protégées
@@ -24,7 +28,8 @@ Route::middleware('auth:api')->group(function () {
     //Routes pour les produits
     Route::apiResource('produit', \App\Http\Controllers\API\ProduitController::class);
 
-
 });
 
+//Route de recherche
+Route::get('search', [ProduitController::class, 'search'])->name('search');
 

@@ -28,7 +28,7 @@ class UserRequest extends FormRequest
             'telephone'=>['required'],
             'email'=>['required', 'email', 'unique:users,email'],
             'adresse'=>['required', 'min:2'],
-            'role' => ['required', Rule::in(['admin', 'client'])],
+            'role' => ['required', Rule::in(['admin', 'client', 'livraison'])],
             'password' => ['required', 'min:4'],
             'c_password' => ['required', 'same:password'],
         ];

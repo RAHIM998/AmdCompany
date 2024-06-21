@@ -26,19 +26,21 @@ class ProduitRequest extends FormRequest
             'libelle' => 'required|string|max:255',
             'prix' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|max:2048', // Validation pour l'image
             'description' => 'nullable|string',
         ];
     }
 
-    public function messages():array
+
+    public function messages(): array
     {
         return [
-            'categorie_id.required' => 'L\id du catégory est obligatoire et doit être un id valide  !!',
-            'libelle.required' => 'Le libelle est obligatoire et ne doit pas dépasser 255 caractère !!',
-            'prix.required' => 'Le prix est obligatoire et est toujours supérieur à 0 !!',
-            'stock.required' => 'Le stock est obligatoire et est toujours supérieur à 0 !!',
-            'image.min' => 'La taille de l\'image ne doit pas dépasser 2048 octet!!',
+            'categorie_id.required' => 'L\'id du catégorie est obligatoire et doit être un id valide !!',
+            'libelle.required' => 'Le libellé est obligatoire et ne doit pas dépasser 255 caractères !!',
+            'prix.required' => 'Le prix est obligatoire et doit être supérieur à 0 !!',
+            'stock.required' => 'Le stock est obligatoire et doit être supérieur à 0 !!',
+            'image.max' => 'La taille de l\'image ne doit pas dépasser 2048 octets !!', // Message pour la taille de l'image
         ];
     }
+
 }

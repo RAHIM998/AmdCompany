@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 use Laravel\Passport\Token;
 use Mockery\Exception;
@@ -98,23 +99,12 @@ class UserController extends Controller
         try {
             $validated = $request->validated();
 
-            if ($validated){
-                $users = User::create([
-                    'nom' => $request->nom,
-                    'prenom' => $request->prenom,
-                    'telephone' => $request -> telephone,
-                    'email' => $request->email,
-                    'adresse' => $request->adresse,
-                    'role' => $request->role,
-                    'password' => Hash::make($request->password),
-                ]);
+                $users = User::create($validated);
 
                 return $this->responseJson([
                    'token' => $users->createToken('Amdcompany')->accessToken,
                    'user' => $users,
                 ], 'Utilisateur créé avec succès !!',  200);
-
-            }
 
         }catch (\Exception $exception){
             return $this->responseJson('Erreur', 'Une erreur s\'est produite lors de la création
