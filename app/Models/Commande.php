@@ -22,7 +22,7 @@ class Commande extends Model
 
     public function produits(): BelongsToMany
     {
-        return $this->belongsToMany(Produit::class);
+        return $this->belongsToMany(Produit::class, 'produit_commandes')->withPivot('quantite', 'prixUnitaire');
     }
 
     public function user(): BelongsTo

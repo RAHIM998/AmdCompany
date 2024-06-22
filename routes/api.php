@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\CommandeController;
 use App\Http\Controllers\API\ProduitController;
 use App\Http\Controllers\API\UserController;
 use Illuminate\Http\Request;
@@ -27,6 +28,9 @@ Route::middleware('auth:api')->group(function () {
 
     //Routes pour les produits
     Route::apiResource('produit', \App\Http\Controllers\API\ProduitController::class);
+
+    //Routes des commandes
+    Route::apiResource('commande', CommandeController::class);
 
 });
 

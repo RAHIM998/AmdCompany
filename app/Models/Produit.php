@@ -27,9 +27,9 @@ class Produit extends Model
         return $this->belongsTo(Categorie::class);
     }
 
+
     public function commande(): BelongsToMany
     {
-        return $this->belongsToMany(Commande::class);
+        return $this->belongsToMany(Commande::class, 'produit_commandes')->withPivot('quantite', 'prixUnitaire');
     }
-
 }
