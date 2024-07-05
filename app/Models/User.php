@@ -57,4 +57,15 @@ class User extends Authenticatable
         return $this->hasMany(Commande::class);
     }
 
+    //Fonction de vérification du rôle des utilisateurs
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    // Vérifie si l'utilisateur est dans le service de livraison
+    public function isDeliveryService()
+    {
+        return $this->role === 'delivery';
+    }
 }

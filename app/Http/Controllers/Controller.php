@@ -5,6 +5,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Auth;
+
 abstract class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
@@ -22,6 +24,11 @@ abstract class Controller extends BaseController
         $content = stream_get_contents($file);
         fclose($file);
         return base64_encode($content);
+    }
+
+    public function searchproduct(ModelNotFoundException $e)
+    {
+        return $this->responseJson(null, 'Ressource non trouvé !!', 404);
     }
 
 }

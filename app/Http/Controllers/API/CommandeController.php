@@ -6,20 +6,31 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CommandeRequest;
 use App\Models\Commande;
 use App\Models\Produit;
+use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Mockery\Exception;
+use App\Notifications\StatusCommandeChangeNotification;
+
 
 class CommandeController extends Controller
 {
     //Fonction d'affichage des commandes
     public function index()
     {
-        $commande = Commande::with('produits')->get();
-
-        return $this->responseJson([$commande], 'Commande retrieved successfully');
+        try {
+            $user = Auth::user();
+            if ($user->isAdmin() || $user->isDeliveryService()){
+                $commande = Commande::with('produits')->get();
+                return $this->responseJson([$commande], 'Commande retrieved successfully');
+            }else{
+                return $this->responseJson(null, 'Vous n\'avez pas les droits requis pour accéder aux commandes', 403);
+            }
+        }catch (Exception $e){
+            return $this->responseJson($e->getMessage(),'Erreur',500);
+        }
     }
 
     //Fonction d'ajout de commande
@@ -27,55 +38,64 @@ class CommandeController extends Controller
     {
         try {
             $validated = $request->validated();
+            $numeroCommande = 'CMD' . date('ymd') . rand(1000, 9999);
 
-            // Calcul du total de la commande
-            $montantTotal = 0;
-            $produitDetails = [];
+            DB::beginTransaction();
 
-            // Vérification de la disponibilité du produit et calcul du montant total
-            foreach ($validated['produits'] as $produit) {
-                $prodctType = Produit::findOrFail($produit['id']);
-                $prixUnitaire = $prodctType->prix;
+            $totalCommande = 0;
+            $prodCom = [];
 
-                //Vérification de la disponibilité
-                if ($prodctType->stock < $produit['quantite']) {
-                    return response()->json(['message' => "Stock insuffisant pour le produit {$prodctType->libelle}"], 400);
+            foreach ($validated['produits'] as $Product) {
+                try {
+                    $productSearch = Produit::findOrFail($Product['id']);
+                    if ($productSearch->stock < $Product['quantite']) {
+                        DB::rollBack();
+                        return response()->json(['message' => "Stock insuffisant pour le produit {$productSearch->libelle}"], 400);
+                    } else {
+                        $prixUnitaire  = $productSearch->prix;
+                        $totalCommande += $prixUnitaire * $Product['quantite'];
+                        $prodCom[$Product['id']] = [
+                            'quantite' => $Product['quantite'],
+                            'prixUnitaire' => $prixUnitaire,
+                        ];
+                    }
+                } catch (ModelNotFoundException $e) {
+                    DB::rollBack();
+                    return $this->searchproduct($e);
                 }
-
-                //Calcul du montant total
-                $montantTotal += $prixUnitaire * $produit['quantite'];
-
-                //chargement des détaisl
-                $produitDetails[$produit['id']] = [
-                    'quantite' => $produit['quantite'],
-                    'prixUnitaire' => $prixUnitaire
-                ];
             }
 
-            // Génération du numéro de commande
-            $numeroCommande = 'CMD'.date('ymd').rand(1000, 9999);
+            $Commande = Commande::create([
+                'user_id' => Auth::id(),
+                'numeroCommande' => $numeroCommande,
+                'dateCommande' => now(),
+                'montant' => $totalCommande,
+                'status' => 'confirmation en attente',
+            ]);
 
-            DB::transaction(function () use ($validated, $montantTotal, $numeroCommande, $produitDetails) {
-                // Création de la commande
-                $commande = Commande::create([
-                    'user_id' => Auth::id(),
-                    'numeroCommande' => $numeroCommande,
-                    'dateCommande' => now(),
-                    'montant' => $montantTotal,
-                    'status' => 'confirmation en attente',
-                ]);
+            foreach ($prodCom as $produitId => $prod) {
+                try {
+                    $productSave = Produit::findOrFail($produitId);
+                    $productSave->decrement('stock', $prod['quantite']);
 
-                // Mise à jour du stock et insertion des produits dans la table pivot
-                foreach ($produitDetails as $produitId => $details) {
-                    $produit = Produit::findOrFail($produitId);
-                    $produit->decrement('stock', $details['quantite']);
-                    $commande->produits()->attach($produitId, $details);
+                    $Commande->produits()->attach($productSave->id, $prod);
+                } catch (ModelNotFoundException $e) {
+                    DB::rollBack();
+                    return $this->searchproduct($e);
                 }
-            });
+            }
+
+            $user = Auth::user();
+            $user->notify(new StatusCommandeChangeNotification($user, 'confirmation en attente'));
+
+            DB::commit();
+
 
             return response()->json(['message' => 'Commande créée avec succès'], 201);
-        }catch (Exception $exception){
-            return $this->responseJson([], $exception->getMessage(), 400);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return $this->responseJson($e->getMessage(), 'Erreur', 500);
         }
     }
 
@@ -85,15 +105,34 @@ class CommandeController extends Controller
         try {
             $commande = Commande::with('produits')->findOrFail($id);
             return response()->json([$commande], 200);
+        } catch (ModelNotFoundException $e) {
+            return $this->searchproduct($e);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Commande not found'], 404);
+            return $this->responseJson(null, $e->getMessage(), 500);
         }
     }
 
     //Fonction de modification d'une commande
-    public function update(CommandeRequest $request, string $id)
+    public function update(Request $request, string $id)
     {
-        //
+        $newStatus = $request->input('status');
+        $user = Auth::user();
+
+        try {
+            $commande = Commande::findOrFail($id);
+
+            if ($commande->Transition($newStatus, $user)) {
+                $commande->updateStatus($newStatus);
+
+                return response()->json(['message' => 'Statut de la commande mis à jour avec succès'], 200);
+            } else {
+                return response()->json(['message' => 'Transition de statut non autorisée'], 403);
+            }
+        } catch (ModelNotFoundException $e) {
+            return $this->searchproduct();
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erreur lors de la mise à jour du statut de la commande'], 500);
+        }
     }
 
     //Fonction de suppression de commande
@@ -104,9 +143,9 @@ class CommandeController extends Controller
             $commande->delete();
             return response()->json([$commande, 'Commande supprimée avec success'], 204);
         } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Commande non trouvée'], 404);
+            return $this->searchproduct($e);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la suppression de la commande'], 500);
+            return $this->responseJson(null, $e->getMessage(), 500);
         }
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Notifications\StatusCommandeChangeNotification;
 
 class Commande extends Model
 {
@@ -40,4 +41,34 @@ class Commande extends Model
         return $this->belongsTo(Paiement::class);
     }
 
+
+    public static $statusTransitions = [
+        'admin' => [
+            'confirmation en attente' => ['commande confirmée', 'commande annulée'],
+            'commande confirmée' => ['en cours de livraison'],
+            'en cours de livraison' => ['commande livrée']
+        ],
+        'livraison' => [
+            'commande confirmée' => ['en cours de livraison'],
+            'en cours de livraison' => ['commande livrée']
+        ],
+        // Ajoutez d'autres règles pour d'autres rôles si nécessaire
+    ];
+
+    public function Transition($newStatus, $user)
+    {
+        $statutActuel = $this->status;
+        $verifAutorisation = self::$statusTransitions[$user->role] ?? [];
+
+        return in_array($newStatus, $verifAutorisation[$statutActuel] ?? []);
+    }
+
+    public function updateStatus($newStatus)
+    {
+        $this->status = $newStatus;
+        $this->save();
+
+        // Envoyer une notification au client
+        $this->user->notify(new StatusCommandeChangeNotification($this, $newStatus));
+    }
 }
